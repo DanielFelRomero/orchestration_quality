@@ -97,6 +97,22 @@ python -m pip check
 
 Ante cualquier error de instalación, deberá revisarse primero la terminal de creación del Codespace antes de modificar las versiones del proyecto.
 
+### Compatibilidad de ydata-profiling
+
+La versión utilizada en esta práctica requiere el módulo `pkg_resources`. Las versiones recientes de `setuptools` ya no lo incluyen; por ello el repositorio fija `setuptools==81.0.0`. Esta restricción es deliberada y forma parte de la configuración reproducible del entorno.
+
+Si el Codespace ya fue creado antes de este ajuste, se deberá actualizar el entorno con:
+
+~~~bash
+python -m pip install -r requirements.txt
+~~~
+
+Después se deberá comprobar nuevamente:
+
+~~~bash
+python -c "import ydata_profiling; print('ydata-profiling disponible')"
+~~~
+
 ## 5. Iniciar Airflow
 
 Desde una terminal:
@@ -206,6 +222,20 @@ cp data/raw/lote_dia_1_bueno.csv data/raw/netflix_titles.csv
 ~~~
 
 Ejecutar:
+
+~~~bash
+python scripts/run_profile.py
+~~~
+
+El archivo `profiling/profile_data.py` no se ejecuta directamente desde la terminal. Es un módulo que contiene la función que será importada por el script de prueba.
+
+No se deberá ejecutar:
+
+~~~bash
+profiling/profile_data.py
+~~~
+
+La forma prevista de probar el perfilado es mediante el script proporcionado:
 
 ~~~bash
 python scripts/run_profile.py
