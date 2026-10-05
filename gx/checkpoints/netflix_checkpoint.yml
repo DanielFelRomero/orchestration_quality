@@ -1,0 +1,26 @@
+name: netflix_checkpoint
+config_version: 1.0
+class_name: SimpleCheckpoint
+run_name_template: "%Y%m%d-%H%M%S-netflix-validation"
+
+validations:
+  - batch_request:
+      datasource_name: netflix_datasource
+      data_connector_name: runtime_data_connector
+      data_asset_name: netflix_staging
+      runtime_parameters:
+        path: data/staging/netflix_staging.csv
+      batch_identifiers:
+        default_identifier_name: netflix_staging
+    expectation_suite_name: netflix_contract
+
+action_list:
+  - name: store_validation_result
+    action:
+      class_name: StoreValidationResultAction
+
+  - name: update_data_docs
+    action:
+      class_name: UpdateDataDocsAction
+      site_names:
+        - local_site
