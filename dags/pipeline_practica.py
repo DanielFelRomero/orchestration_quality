@@ -1,16 +1,19 @@
 """DAG base de la práctica.
 
-Las tareas principales y parte de la integración se encuentran
-preparadas para que el estudiante complete las piezas solicitadas.
+La estructura general del workflow se proporciona como punto de partida.
+Las tareas de preparación, perfilado, validación y publicación permiten
+integrar las herramientas trabajadas durante el curso.
 """
-
-from datetime import timedelta
-from pathlib import Path
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
+from great_expectations_provider.operators.great_expectations import (
+    GreatExpectationsOperator,
+)
 
+from datetime import timedelta
+from pathlib import Path
 
 BASE_PATH = Path(__file__).resolve().parents[1]
 
@@ -19,16 +22,14 @@ STAGING_PATH = BASE_PATH / "data/staging/netflix_staging.csv"
 PROFILE_PATH = BASE_PATH / "data/profiling/netflix_profile.html"
 GOLD_PATH = BASE_PATH / "data/gold/netflix_clean.csv"
 QUARANTINE_PATH = BASE_PATH / "data/quarantine/netflix_failed.csv"
-
+GX_PATH = BASE_PATH / "gx"
 
 def prepare_staging():
     """Preparar el lote en STAGING."""
     import pandas as pd
 
     if not RAW_PATH.exists():
-        raise FileNotFoundError(
-            f"No existe el lote esperado: {RAW_PATH}"
-        )
+        raise FileNotFoundError(f"No existe el lote esperado: {RAW_PATH}")
 
     df = pd.read_csv(RAW_PATH)
 
@@ -39,38 +40,24 @@ def prepare_staging():
     STAGING_PATH.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(STAGING_PATH, index=False)
 
-
 def generate_profile_task():
     from profiling.profile_data import generate_profile
 
-    generate_profile(
-        str(STAGING_PATH),
-        str(PROFILE_PATH),
-    )
-
+    generate_profile(str(STAGING_PATH), str(PROFILE_PATH))
 
 def publish_gold():
     """Publicar el lote aprobado."""
     raise NotImplementedError("Completar la tarea de publicación.")
 
-
 def quarantine_data():
     """Conservar el lote que no supera la validación."""
     raise NotImplementedError("Completar la tarea de cuarentena.")
 
-
-def validate_data():
-    """Ejecutar la validación definida mediante Great Expectations."""
-    raise NotImplementedError("Completar la tarea de validación.")
-
-
 default_args = {
     "owner": "estudiante",
     "depends_on_past": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=1),
+    "retries": 0,
 }
-
 
 with DAG(
     dag_id="orchestration_quality_practice",
@@ -92,19 +79,23 @@ with DAG(
         python_callable=generate_profile_task,
     )
 
-    validate = PythonOperator(
+    validate = GreatExpectationsOperator(
         task_id="validate_data",
-        python_callable=validate_data,
+        data_context_root_dir=str(GX_PATH),
+        checkpoint_name="netflix_checkpoint",
+        fail_task_on_validation_failure=True,
     )
 
     publish = PythonOperator(
         task_id="publish_gold",
         python_callable=publish_gold,
+        trigger_rule="all_success",
     )
 
     quarantine = PythonOperator(
         task_id="quarantine_data",
         python_callable=quarantine_data,
+        trigger_rule="one_failed",
     )
 
     prepare >> profile >> validate
