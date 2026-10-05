@@ -3,9 +3,13 @@
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "remoteEnv": {
     "AIRFLOW_HOME": "${containerWorkspaceFolder}",
-    "AIRFLOW__CORE__LOAD_EXAMPLES": "False"
+    "AIRFLOW__CORE__LOAD_EXAMPLES": "False",
+    "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
   },
-  "forwardPorts": [8080, 8081],
+  "forwardPorts": [
+    8080,
+    8081
+  ],
   "portsAttributes": {
     "8080": {
       "label": "Airflow UI",
