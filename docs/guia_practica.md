@@ -114,15 +114,7 @@ Ante cualquier error de instalación, deberá revisarse primero la terminal de c
 
 La versión utilizada en esta práctica utiliza componentes que todavía dependen de `pkg_resources`. Por compatibilidad, el entorno fija `setuptools==80.9.0`, evitando `setuptools>=81`.
 
-La instalación de Airflow se realiza por separado con las constraints oficiales de Airflow. Las dependencias adicionales se instalan después, siguiendo el modelo recomendado por Airflow para dependencias propias. citeturn1view0
-
-Si el Codespace ya fue creado antes de este ajuste, se deberá reconstruir el contenedor para ejecutar nuevamente `.devcontainer/setup.sh`.
-
-Después se deberá comprobar nuevamente:
-
-~~~bash
-python -c "import ydata_profiling; print('ydata-profiling disponible')"
-~~~
+La instalación de Airflow se realiza por separado con las constraints oficiales de Airflow. Las dependencias adicionales se instalan después, siguiendo el modelo recomendado por Airflow para dependencias propias.
 
 ## 5. Iniciar Airflow
 
@@ -220,8 +212,6 @@ Una tabla de análisis similar a:
 | Campo 2 |  |  |  |
 | Campo 3 |  |  |  |
 
-La tabla deberá completarse antes de pasar a la etapa de profiling.
-
 ## 8. Implementar el data profiling
 
 <details>
@@ -263,21 +253,7 @@ cp data/raw/lote_dia_1_bueno.csv data/raw/netflix_titles.csv
 Ejecutar:
 
 ~~~bash
-python scripts/run_profile.py
-~~~
-
-El archivo `profiling/profile_data.py` no se ejecuta directamente desde la terminal. Es un módulo que contiene la función que será importada por el script de prueba.
-
-No se deberá ejecutar:
-
-~~~bash
-profiling/profile_data.py
-~~~
-
-La forma prevista de probar el perfilado es mediante el script proporcionado:
-
-~~~bash
-python scripts/run_profile.py
+python -m scripts.run_profile
 ~~~
 
 Comprobar que se genere:
