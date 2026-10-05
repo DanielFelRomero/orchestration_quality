@@ -16,6 +16,7 @@ python -m pip install \
   "airflow-provider-great-expectations==0.2.9" \
   "pandas" \
   "mlcroissant" \
-  "ydata-profiling==4.16.1"
+  "ydata-profiling==4.16.1" \
+  "setuptools==81.0.0"
 
 python -m pip check
