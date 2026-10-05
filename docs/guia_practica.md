@@ -12,6 +12,8 @@ Se trabajará con Apache Airflow, ydata-profiling y Great Expectations sobre un 
 
 El objetivo consiste en construir un pipeline capaz de recibir un lote, prepararlo, inspeccionarlo, validarlo y decidir si puede publicarse o debe enviarse a cuarentena.
 
+Las secciones de "Ayuda de contingencia" son ayudas opcionales y plegables para desbloquear errores durante la práctica.
+
 El ejercicio parte de una infraestructura base y de una plantilla parcial. La implementación de los componentes pendientes deberá ser realizada durante la práctica.
 
 ## 2. Escenario
@@ -63,6 +65,17 @@ La presencia de NotImplementedError en algunos archivos es intencional.
 
 ## 4. Preparar GitHub Codespaces
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Si la creación del Codespace falla durante `postCreateCommand`, no se deberán cambiar versiones de Airflow, GX o ydata-profiling manualmente. Se deberá reconstruir el contenedor para que se ejecute nuevamente `.devcontainer/setup.sh`.
+
+La configuración crea un entorno virtual en `.venv/` y lo agrega al `PATH`. Después de reconstruir, `which python` debería apuntar a una ruta dentro de `.venv/bin/`.
+
+Si el entorno ya fue creado antes de este ajuste, utilizar **Codespaces/Dev Containers → Rebuild Container** y volver a comprobar las versiones.
+
+</details>
+
 1. Abrir el repositorio mediante GitHub Codespaces.
 2. Esperar a que finalice la creación del entorno.
 3. Comprobar la versión de Python:
@@ -99,13 +112,11 @@ Ante cualquier error de instalación, deberá revisarse primero la terminal de c
 
 ### Compatibilidad de ydata-profiling
 
-La versión utilizada en esta práctica requiere el módulo `pkg_resources`. Las versiones recientes de `setuptools` ya no lo incluyen; por ello el repositorio fija `setuptools==81.0.0`. Esta restricción es deliberada y forma parte de la configuración reproducible del entorno.
+La versión utilizada en esta práctica utiliza componentes que todavía dependen de `pkg_resources`. Por compatibilidad, el entorno fija `setuptools==80.9.0`, evitando `setuptools>=81`.
 
-Si el Codespace ya fue creado antes de este ajuste, se deberá actualizar el entorno con:
+La instalación de Airflow se realiza por separado con las constraints oficiales de Airflow. Las dependencias adicionales se instalan después, siguiendo el modelo recomendado por Airflow para dependencias propias. citeturn1view0
 
-~~~bash
-python -m pip install -r requirements.txt
-~~~
+Si el Codespace ya fue creado antes de este ajuste, se deberá reconstruir el contenedor para ejecutar nuevamente `.devcontainer/setup.sh`.
 
 Después se deberá comprobar nuevamente:
 
@@ -114,6 +125,13 @@ python -c "import ydata_profiling; print('ydata-profiling disponible')"
 ~~~
 
 ## 5. Iniciar Airflow
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Si el comando `airflow` no se encuentra, comprobar primero `which airflow`. Debe apuntar a `.venv/bin/airflow`. Si no es así, el contenedor no tomó todavía la configuración actual y debe reconstruirse.
+
+</details>
 
 Desde una terminal:
 
@@ -130,6 +148,13 @@ En la pestaña Ports de Codespaces deberá localizarse el puerto 8080 y abrirse 
 Deberá mantenerse esta terminal abierta durante la práctica.
 
 ## 6. Preparar los datos
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+La ejecución esperada es `python scripts/preparar_lotes.py`. Los mensajes de advertencia provenientes de la descarga del dataset no implican por sí mismos un fallo si al final aparecen los dos archivos preparados.
+
+</details>
 
 En una segunda terminal:
 
@@ -162,6 +187,13 @@ cp data/raw/lote_dia_2_malo.csv data/raw/netflix_titles.csv
 
 ## 7. Inspección inicial
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Una revisión mínima puede hacerse con `df.shape`, `df.columns`, `df.dtypes`, `df.isna().sum()`, `df.duplicated().sum()`, `df.describe(include="all")` y la inspección de valores únicos de campos categóricos. La tabla de hallazgos debe distinguir observación de regla de calidad.
+
+</details>
+
 Antes de utilizar una herramienta automática de profiling, se deberá realizar una inspección básica con Pandas.
 
 Para el lote seleccionado se deberá registrar:
@@ -191,6 +223,13 @@ Una tabla de análisis similar a:
 La tabla deberá completarse antes de pasar a la etapa de profiling.
 
 ## 8. Implementar el data profiling
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+La implementación mínima consiste en importar `pandas`, `Path` y `ProfileReport`, leer el CSV recibido, crear el reporte y ejecutar `profile.to_file(output_file)`. Para Codespaces pequeños puede utilizarse `minimal=True` para reducir cálculos costosos. No se debe cambiar la firma de `generate_profile(input_path, output_path)`.
+
+</details>
 
 Abrir:
 
@@ -258,6 +297,13 @@ Abrir el reporte y comparar sus resultados con las observaciones de la inspecci�
 
 ## 9. Definir el contrato de datos
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Una solución razonable puede derivar reglas de los campos problemáticos observados en el lote defectuoso: existencia de columnas, ausencia de identificadores nulos, valores categóricos permitidos y un rango lógico para `release_year`. La clave es justificar cada regla con un hallazgo previo.
+
+</details>
+
 A partir de la inspección y del profiling, se deberá definir qué condiciones debe cumplir un lote para poder publicarse.
 
 El contrato deberá contemplar como mínimo:
@@ -290,6 +336,13 @@ Una regla deberá tener una justificación. No se deberán agregar Expectations 
 
 ## 10. Configurar Great Expectations
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+El camino esperado es: Data Source → Data Asset/Batch → Expectation Suite → Expectations → Checkpoint. El Checkpoint debe llamarse `netflix_checkpoint`, porque ese es el nombre que utiliza el DAG base. La configuración se guarda dentro de `gx/`.
+
+</details>
+
 Great Expectations deberá utilizarse para representar el contrato de datos.
 
 El trabajo deberá contemplar:
@@ -314,6 +367,13 @@ No se proporciona en esta guía una lista cerrada de Expectations. Las reglas de
 Los artefactos de Great Expectations deberán quedar dentro de gx/.
 
 ## 11. Completar el DAG
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+La estructura del DAG ya contiene las tareas principales. Sólo deben completarse las operaciones pendientes de publicación y cuarentena y mantenerse las dependencias proporcionadas. `GreatExpectationsOperator` debe ejecutar `netflix_checkpoint` con `fail_task_on_validation_failure=True`.
+
+</details>
 
 Abrir:
 
@@ -355,6 +415,13 @@ No se deberá reemplazar la validación mediante una función Python que ejecute
 
 ## 12. Configurar los reintentos
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+La configuración base `retries=0` es válida. Una justificación típica es no reintentar automáticamente un fallo determinístico de calidad. Si se decide usar retry, debe hacerse sólo en una tarea donde una causa transitoria sea plausible y explicarse por qué.
+
+</details>
+
 El default_args del DAG parte de retries = 0.
 
 Esto es intencional.
@@ -372,6 +439,13 @@ La decisión deberá implementarse mediante configuración específica de cada t
 Un error de calidad reproducible no deberá resolverse mediante reintentos automáticos.
 
 ## 13. Ejecutar el escenario de datos válidos
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+El recorrido esperado es `prepare_staging → generate_profile → validate_data → publish_gold`. La tarea de cuarentena no debe convertirse en el resultado normal del lote válido. Debe existir `data/gold/netflix_clean.csv` después de una ejecución aprobada.
+
+</details>
 
 Preparar:
 
@@ -405,6 +479,13 @@ Deberá conservarse una captura en la que se observe el DAG ejecutado y otra que
 
 ## 14. Ejecutar el escenario de datos defectuosos
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+El lote defectuoso debe provocar al menos una Expectation fallida. Como la validación está configurada para fallar la tarea de Airflow, `publish_gold` no debe ejecutarse y `quarantine` debe quedar habilitada por su `trigger_rule="one_failed"`. El resultado esperado es conservar el lote rechazado en `data/quarantine/`.
+
+</details>
+
 Preparar:
 
 ~~~bash
@@ -427,6 +508,13 @@ Deberá conservarse evidencia del resultado de la validación, del estado del DA
 
 ## 15. Analizar el comportamiento de Airflow
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Un error transitorio de infraestructura puede justificar retry; una Expectation que falla siempre con el mismo lote no. En este diseño, un fallo de calidad debe impedir GOLD y dirigir el flujo hacia QUARANTINE.
+
+</details>
+
 La ejecución deberá utilizarse para analizar la diferencia entre:
 
 ### Error de ejecución
@@ -445,6 +533,13 @@ Responder:
 
 ## 16. Experimento controlado
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Una forma sencilla es modificar deliberadamente `release_year`, `type` o `show_id` para romper una regla ya definida. Después se debe comprobar que el fallo aparece en la validación y observar el efecto sobre las tareas downstream.
+
+</details>
+
 Se deberá modificar deliberadamente uno de los lotes.
 
 La modificación deberá producir una anomalía que rompa una Expectation existente o requiera una nueva regla.
@@ -461,6 +556,13 @@ Después de realizar el cambio:
 El experimento deberá quedar documentado.
 
 ## 17. Evidencias finales
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Las evidencias mínimas deben permitir reconstruir el recorrido completo sin depender de explicaciones verbales: entorno, DAG, perfil, contrato, suite/checkpoint, ejecución válida, ejecución defectuosa, GOLD y QUARANTINE.
+
+</details>
 
 La evidencia deberá demostrar el funcionamiento de extremo a extremo.
 
@@ -483,6 +585,13 @@ Las capturas deberán mostrar suficiente contexto para interpretar el resultado.
 
 ## 18. Reflexión final
 
+<details>
+<summary>Ayuda de contingencia</summary>
+
+Las respuestas deberían conectar conceptos, no limitarse a definiciones: profiling describe y ayuda a descubrir; validation determina cumplimiento; Airflow coordina; GX expresa y ejecuta reglas; retry responde a fallos transitorios, no corrige datos inválidos.
+
+</details>
+
 Responder:
 
 1. ¿Qué diferencia existe entre profiling y data quality validation?
@@ -497,6 +606,13 @@ Responder:
 10. ¿Qué componentes adicionales serían necesarios para llevar este diseño a una arquitectura productiva?
 
 ## 19. Criterio de terminación
+
+<details>
+<summary>Ayuda de contingencia</summary>
+
+El criterio práctico se cumple cuando se pueden demostrar dos ejecuciones diferentes: lote válido terminado en GOLD y lote defectuoso terminado en QUARANTINE, con la validación actuando como punto de decisión entre ambos.
+
+</details>
 
 La práctica se considera terminada cuando el pipeline demuestra ambos recorridos:
 
