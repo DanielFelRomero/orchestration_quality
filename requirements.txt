@@ -1,0 +1,6 @@
+apache-airflow==2.8.3
+great_expectations==0.18.19
+pandas
+airflow-provider-great-expectations
+mlcroissant
+ydata-profiling
