@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.airflow/
+logs/
+data/raw/*.csv
+data/staging/*.csv
+data/profiling/*
+data/gold/*.csv
+data/quarantine/*.csv
+gx/uncommitted/
