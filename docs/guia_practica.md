@@ -315,32 +315,143 @@ Una regla deberá tener una justificación. No se deberán agregar Expectations 
 <details>
 <summary>Ayuda de contingencia</summary>
 
-El camino esperado es: Data Source → Data Asset/Batch → Expectation Suite → Expectations → Checkpoint. El Checkpoint debe llamarse `netflix_checkpoint`, porque ese es el nombre que utiliza el DAG base. La configuración se guarda dentro de `gx/`.
+La infraestructura de Great Expectations ya se encuentra preparada en `gx/`. No es necesario ejecutar `great_expectations init`, reconstruir el Data Context, crear nuevamente el datasource ni modificar el Checkpoint.
+
+La única construcción requerida en esta etapa es la Expectation Suite que representa el contrato de datos. Para ello se dispone de un archivo de ejemplo:
+
+```text
+gx/expectations/netflix_contract.example.json
+```
+
+El Checkpoint debe conservar el nombre `netflix_checkpoint`, porque ese es el nombre que utiliza el DAG base.
 
 </details>
 
-Great Expectations deberá utilizarse para representar el contrato de datos.
+La infraestructura de Great Expectations ya está preparada dentro de:
 
-El trabajo deberá contemplar:
+```text
+gx/
+├── great_expectations.yml
+├── expectations/
+│   └── netflix_contract.example.json
+├── checkpoints/
+│   └── netflix_checkpoint.yml
+└── plugins/
+```
 
-1. inicialización de la configuración local;
-2. configuración de una fuente de datos adecuada;
-3. creación de una Expectation Suite;
-4. creación de las Expectations seleccionadas;
-5. ejecución de una validación de prueba;
-6. creación de un Checkpoint.
+No se deberán modificar `great_expectations.yml` ni `checkpoints/netflix_checkpoint.yml`, salvo que exista una justificación técnica explícita.
 
-El Checkpoint deberá utilizar un nombre estable, debido a que posteriormente será utilizado desde Airflow.
+### Construir la Expectation Suite
 
-La configuración deberá permitir validar el lote preparado en:
+El único artefacto que deberá construirse es:
 
-~~~text
+```text
+gx/expectations/netflix_contract.json
+```
+
+Para conservar la estructura esperada, se puede partir del archivo de ejemplo:
+
+```bash
+cp gx/expectations/netflix_contract.example.json gx/expectations/netflix_contract.json
+```
+
+El ejemplo contiene una Expectation mínima y muestra la sintaxis utilizada por Great Expectations 0.18.x. A partir de allí deberán agregarse las Expectations necesarias para representar el contrato definido en la etapa anterior.
+
+El contrato deberá contemplar como mínimo:
+
+- estructura;
+- completitud;
+- unicidad;
+- validez categórica;
+- validez numérica.
+
+Cada regla deberá estar relacionada con un hallazgo de la inspección o del profiling y deberá existir una justificación para incluirla.
+
+### Prueba de la configuración
+
+Antes de ejecutar Airflow, se puede comprobar que Great Expectations reconoce la infraestructura preparada.
+
+Desde la raíz del repositorio:
+
+```bash
+python -c "import great_expectations as gx; context = gx.get_context(context_root_dir='gx'); print(context.list_checkpoints())"
+```
+
+Deberá aparecer:
+
+```text
+['netflix_checkpoint']
+```
+
+Después de crear `netflix_contract.json`, comprobar:
+
+```bash
+python -c "import great_expectations as gx; context = gx.get_context(context_root_dir='gx'); print(context.list_expectation_suite_names())"
+```
+
+Deberá aparecer la suite:
+
+```text
+['netflix_contract']
+```
+
+### Ejecutar una validación de prueba
+
+El Checkpoint está configurado para validar:
+
+```text
 data/staging/netflix_staging.csv
-~~~
+```
 
-No se proporciona en esta guía una lista cerrada de Expectations. Las reglas deberán derivarse del contrato definido.
+Por tanto, debe existir ese archivo antes de ejecutar el Checkpoint.
 
-Los artefactos de Great Expectations deberán quedar dentro de gx/.
+Para una prueba aislada con el lote válido:
+
+```bash
+cp data/raw/lote_dia_1_bueno.csv data/raw/netflix_titles.csv
+```
+
+Preparar el archivo de STAGING con la misma transformación utilizada por el DAG:
+
+```bash
+python -c "import pandas as pd; from pathlib import Path; df=pd.read_csv('data/raw/netflix_titles.csv'); df['director']=df['director'].fillna('Desconocido'); df['cast']=df['cast'].fillna('Desconocido'); Path('data/staging').mkdir(parents=True,exist_ok=True); df.to_csv('data/staging/netflix_staging.csv',index=False)"
+```
+
+Ejecutar el Checkpoint mediante la API de Great Expectations:
+
+```bash
+python -c "import great_expectations as gx; context = gx.get_context(context_root_dir='gx'); result = context.run_checkpoint(checkpoint_name='netflix_checkpoint'); print('VALIDACIÓN:', result.success)"
+```
+
+Con el lote válido se espera:
+
+```text
+VALIDACIÓN: True
+```
+
+Para comprobar el escenario defectuoso:
+
+```bash
+cp data/raw/lote_dia_2_malo.csv data/raw/netflix_titles.csv
+```
+
+Volver a generar:
+
+```text
+data/staging/netflix_staging.csv
+```
+
+con el mismo comando de preparación anterior y ejecutar nuevamente el Checkpoint.
+
+Con el lote defectuoso se espera:
+
+```text
+VALIDACIÓN: False
+```
+
+La salida de Great Expectations deberá utilizarse para identificar qué Expectations fallaron y relacionarlas con las anomalías introducidas en el lote.
+
+Esta prueba se realiza directamente con Great Expectations. La integración con Airflow se comprobará posteriormente mediante `GreatExpectationsOperator`.
 
 ## 11. Completar el DAG
 
